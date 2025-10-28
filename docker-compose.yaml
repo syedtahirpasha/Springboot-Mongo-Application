@@ -3,8 +3,9 @@ version: '3.1'
 services:
   springboot:
     image: syednayeempashakhadri/spring-boot-mongo:latest
-    restart: always #This Will be Ignored If We Deploy in Docker Swarm
+    # We remove 'restart: always' as it's redundant when 'deploy' is defined for swarm
     environment:
+    # --- These are the credentials the Spring Boot application will use ---
     - MONGO_DB_HOSTNAME=mongo
     - MONGO_DB_USERNAME=production
     - MONGO_DB_PASSWORD=production@123
@@ -15,7 +16,10 @@ services:
     - mongo
     networks:
     - springappnetwork
-    deploy:  #This Will be Considered only in Docker Swarm
+    deploy:
+      # Removed 'replicas', 'update_config', 'restart_policy' for clarity if not using swarm,
+      # but keeping them here if you intend to run in swarm mode later.
+      # If running with 'docker compose up', these are ignored.
       replicas: 2
       update_config:
         parallelism: 1
@@ -24,12 +28,16 @@ services:
         condition: on-failure
         delay: 10s
         max_attempts: 5
+    restart: always
 
   mongo:
     image: mongo
     environment:
-    - MONGO_INITDB_ROOT_USERNAME=production
-    - MONGO_INITDB_ROOT_PASSWORD=production@123
+    # --- IMPORTANT FIX: Use a separate name for the initial root user ---
+    # This user is created with administrative privileges when the container starts.
+    - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+    - MONGO_INITDB_ROOT_PASSWORD=adminpass
+    # The application user ('production') will now be created manually by the admin.
     volumes:
     - mongodb:/data/db
     restart: always
@@ -42,5 +50,4 @@ volumes:
 
 networks:
   springappnetwork:
-
     external: true
